@@ -26,7 +26,7 @@
       **************************************************************************************
       */
       const dir_path = 'C:\\Users\\Sun\\Documents\\JavaScript\\Projects\\Capacity Plan\\'
-      const server_url = 'http://127.0.0.1:3000';
+      const server_url = 'http://127.0.0.1:3000'; //localhost
       window.onload = main;
 
       /*
@@ -141,25 +141,129 @@
             header: true
           });
           console.log(csv_data);
+          create_overall_lob(csv_data.data);
           handle_csv_data(csv_data.data);
         });
+      }
+
+      function get_header_mapping() {
+          let mapping = {
+            "Date": { "calc": "none" },
+            "Account": { "calc": "none" },
+            "Subprocess": { "calc": "none" },
+            "HC Billable": { "calc": "sum" },
+            "Billing Type": { "calc": "none" },
+            "HC New Hires": { "calc": "sum" },
+            "AHT": { "calc": "avg" },
+            "Volume": { "calc": "sum" },
+            "Planned Occupancy %": { "calc": "avg" },
+            "HC Known Attrition": { "calc": "sum" },
+            "Baseline Attrition %": { "calc": "avg" },
+            "Planned OOO Shrinkage": { "calc": "avg" },
+            "Planned IO Shrinkage": { "calc": "avg" },
+            "HC Tenured": { "calc": "sum" },
+            "Batch 01 Ramp ID": { "calc": "sum" },
+            "Batch 01 Ramp HC": { "calc": "sum" },
+            "Batch 01 Ramp Week": { "calc": "sum" },
+            "Batch 02 Ramp ID": { "calc": "sum" },
+            "Batch 02 Ramp HC": { "calc": "sum" },
+            "Batch 02 Ramp Week": { "calc": "sum" },
+            "Batch 03 Ramp ID": { "calc": "sum" },
+            "Batch 03 Ramp HC": { "calc": "sum" },
+            "Batch 03 Ramp Week": { "calc": "sum" },
+            "Batch 04 Ramp ID": { "calc": "sum" },
+            "Batch 04 Ramp HC": { "calc": "sum" },
+            "Batch 04 Ramp Week": { "calc": "sum" },
+            "Batch 05 Ramp ID": { "calc": "sum" },
+            "Batch 05 Ramp HC": { "calc": "sum" },
+            "Batch 05 Ramp Week": { "calc": "sum" },
+            "Batch 01 Training ID": { "calc": "sum" },
+            "Batch 01 Training HC": { "calc": "sum" },
+            "Batch 01 Training Week": { "calc": "sum" },
+            "Batch 02 Training ID": { "calc": "sum" },
+            "Batch 02 Training HC": { "calc": "sum" },
+            "Batch 02 Training Week": { "calc": "sum" },
+            "Batch 03 Training ID": { "calc": "sum" },
+            "Batch 03 Training HC": { "calc": "sum" },
+            "Batch 03 Training Week": { "calc": "sum" },
+            "Batch 04 Training ID": { "calc": "sum" },
+            "Batch 04 Training HC": { "calc": "sum" },
+            "Batch 04 Training Week": { "calc": "sum" },
+            "Batch 05 Training ID": { "calc": "sum" },
+            "Batch 05 Training HC": { "calc": "sum" },
+            "Batch 05 Training Week": { "calc": "sum" },
+            "FTE Required Gross": { "calc": "sum" },
+            "HC Production": { "calc": "sum" },
+            "Over/Under": { "calc": "sum" }
+        }
+
+        return mapping;
+      }
+
+      function create_overall_lob(csv_data) {
+        let lob_list = csv_data.map((x) => x['Subprocess']);
+        csv_data.unique_lob_list = [...new Set(lob_list)].filter((x) => typeof x !== 'undefined');
+        let nrows = lob_list.length / csv_data.unique_lob_list.length;
+        let overall = 'Overall';
+        let calc_map = get_header_mapping();
+
+        for (let i = 0; i < nrows; ++i) {
+          let new_idx = i+lob_list.length;
+          //console.log(new_idx);
+          csv_data[new_idx] = {};
+          for (let prop in csv_data[0]) {
+            if (Object.hasOwn(csv_data[0], prop)) {
+              //console.log('found prop ' + prop);
+              if (calc_map[prop].calc !== 'none') {
+                if (typeof csv_data[new_idx][prop] === 'undefined') {
+                  csv_data[new_idx][prop] = 0;
+                }
+                //console.log('summing');
+                for (let j = 0; j < csv_data.unique_lob_list.length; ++j) {
+                  let num = parseFloat(csv_data[i+j*nrows][prop]);
+                  if (isNaN(num)) {
+                    num = csv_data[i+j*nrows][prop] = 0; // change all NaN to 0
+                  }
+                  csv_data[new_idx][prop] += num;
+                  if (prop === 'HC Billable') {
+                    console.log('added ' + num + ' from lob ' + csv_data[i+j*nrows]['Subprocess'] + ' total ' + csv_data[new_idx][prop]);
+                  }
+                }
+                if (calc_map[prop].calc === 'avg' && i === 0) {
+                  csv_data[new_idx][prop] /= csv_data.unique_lob_list.length;
+                }
+              } else {
+                if (prop === 'Subprocess') {
+                  csv_data[new_idx][prop] = overall;
+                } else {
+                  csv_data[new_idx][prop] = csv_data[i][prop];
+                }
+              }
+            }
+          }
+        }
+
+        csv_data.unique_lob_list.push(overall);
+        console.log("create_overall_lob()");
+        console.log(nrows);
+        console.log(lob_list.length);
+        console.log(csv_data);
       }
 
       function handle_csv_data(csv_data) {
         let hot_container = document.getElementById("hot_test");
         let lob_list_container = document.getElementById("lob_list");
 
-        let lob_list = csv_data.map((x) => x['Subprocess']);
         console.log("handle_csv_data()");
-        let unique_lob_list = [...new Set(lob_list)].filter((x) => typeof x !== 'undefined');
         lob_list_container.innerHTML = "";
-        for (let i = 0; i < unique_lob_list.length; i++) {
+        for (let i = 0; i < csv_data.unique_lob_list.length; i++) {
           let li = document.createElement('li');
           li.classList.add('list-group-item');
           li.classList.add('list-group-item-action');
-          li.appendChild(document.createTextNode(unique_lob_list[i]));
+          li.appendChild(document.createTextNode(csv_data.unique_lob_list[i]));
           lob_list_container.appendChild(li);
           let config = create_hot_config_data(csv_data, li.innerText);
+          config.lob = csv_data.unique_lob_list[i];
           HOT_CONFIG_LIST.push(config);
           li.addEventListener('click', () => {
             for (let j = 0; j < lob_list_container.children.length; ++j) {
@@ -208,15 +312,25 @@
         for (let i = 0; i < data.table.length; ++i) {
           delete data.table[i]["FTE Required Gross"];
           delete data.table[i]["HC Production"];
+          delete data.table[i]["Over/Under"];
         }
+        return data;
+      }
+
+      function remove_overall(data) {
+        console.log('remove_overall()');
+        console.log(data.table);
+        data.table = data.table.filter((value) => value['Subprocess'] !== 'Overall');
         return data;
       }
 
       function save_table(hot_config_list) {
         let double_trans = { table: [] };
         for (let i = 0; i < hot_config_list.length; ++i) {
-          let dt = transpose_data(JSON.parse(JSON.stringify(HOT_CONFIG_LIST[i].transposed)), 'metric', 'Date');
-          double_trans.table = double_trans.table.concat(remove_calculated_properties(dt).table);
+          if (hot_config_list[i].lob !== 'Overall') { // Do not save overall to CSV
+            let dt = transpose_data(JSON.parse(JSON.stringify(hot_config_list[i].transposed)), 'metric', 'Date');
+            double_trans.table = double_trans.table.concat(remove_calculated_properties(dt).table);
+          }
         }
         console.log("save table:");
         console.log(double_trans.table);
@@ -328,8 +442,9 @@
 </head>
 <body>
   <div>
-    <h2 class="display-3 p-1">HGS HealthCare</h2>
-    <h4 class="display-4 p-1">Lob List</h4>
+    <img class="p-1" src="hgs-logo-alpha.png" alt="hgs healthcare logo" />
+    <!-- h2 class="display-3 p-1">HGS HealthCare</h2> -->
+    <h4 id="account-header" class="display-4 p-1">Lob List</h4>
     <div class="m-1">
       <button class="m-1 btn btn-primary" onclick="save_csv_file();">Save</button>
       <button class="m-1 btn btn-primary" onclick="read_csv_file();">Load</button>
