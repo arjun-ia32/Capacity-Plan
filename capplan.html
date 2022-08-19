@@ -219,7 +219,9 @@
                   csv_data[new_idx][prop] = 0;
                 }
                 //console.log('summing');
+
                 for (let j = 0; j < csv_data.unique_lob_list.length; ++j) {
+                  //console.log("summing data at row " + i+j*nrows);
                   let num = parseFloat(csv_data[i+j*nrows][prop]);
                   if (isNaN(num)) {
                     num = csv_data[i+j*nrows][prop] = 0; // change all NaN to 0
@@ -253,24 +255,43 @@
       function handle_csv_data(csv_data) {
         let hot_container = document.getElementById("hot_test");
         let lob_list_container = document.getElementById("lob_list");
+        let select_lob_container = document.getElementById("select-lob");
+
+        document.getElementById("account-header").innerText = csv_data[0]['Account'];
 
         console.log("handle_csv_data()");
-        lob_list_container.innerHTML = "";
+        select_lob_container.innerHTML = "";
         for (let i = 0; i < csv_data.unique_lob_list.length; i++) {
-          let li = document.createElement('li');
-          li.classList.add('list-group-item');
-          li.classList.add('list-group-item-action');
-          li.appendChild(document.createTextNode(csv_data.unique_lob_list[i]));
-          lob_list_container.appendChild(li);
-          let config = create_hot_config_data(csv_data, li.innerText);
+          let opt = document.createElement('option');
+          opt.value = csv_data.unique_lob_list[i];
+          opt.appendChild(document.createTextNode(csv_data.unique_lob_list[i]));
+          select_lob_container.appendChild(opt);
+          let config = create_hot_config_data(csv_data, opt.value);
           config.lob = csv_data.unique_lob_list[i];
           HOT_CONFIG_LIST.push(config);
-          li.addEventListener('click', () => {
-            for (let j = 0; j < lob_list_container.children.length; ++j) {
-              lob_list_container.children[j].classList.remove('active');
+        }
+
+        
+        select_lob_container.addEventListener('change', () => {
+            let lob_name = select_lob_container.value;
+            let config;
+            console.log("select on lob change to " + lob_name);
+            for (let i = 0; i < HOT_CONFIG_LIST.length; ++i) {
+              if (HOT_CONFIG_LIST[i].lob === lob_name) {
+                config = HOT_CONFIG_LIST[i];
+                break;
+              }
             }
-            li.classList.add('active');
+
+            if (typeof config === 'undefined') {
+              console.log("could not find lob name in HOT_CONFIG_LIST");
+              throw "Could not find lob name " + lob_name;
+            }
+
             hot_container.innerHTML = "";
+            //console.log("select change, after for loop");
+            //console.log(config);
+            //console.log(HOT_CONFIG_LIST);
             let hot = new Handsontable(hot_container, config);
             config.afterChange_rama = (changes) => {
               if (changes) {
@@ -305,7 +326,6 @@
               }
             }
           });
-        }
       }
 
       function remove_calculated_properties(data) {
@@ -444,12 +464,17 @@
   <div>
     <img class="p-1" src="logo-alpha.png" alt="company logo" />
     <!-- h2 class="display-3 p-1">HGS HealthCare</h2> -->
-    <h4 id="account-header" class="display-4 p-1">Lob List</h4>
+    <h4 id="account-header" class="display-4 p-1"></h4>
     <div class="m-1">
       <button class="m-1 btn btn-primary" onclick="save_csv_file();">Save</button>
       <button class="m-1 btn btn-primary" onclick="read_csv_file();">Load</button>
     </div>
+    <!--
     <ul class="p-1" id="lob_list" style='width: 20%' class="list-group"></ul>
+    --->
+    <label for="select-lob">Select an Lob:</label>
+    <select class="border rounded" autocomplete="off" name="select-lob" id="select-lob">
+    </select>
   </div>
   <div id="hot_test"></div>
 </body>
