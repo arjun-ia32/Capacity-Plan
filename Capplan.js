@@ -12,7 +12,7 @@ let HOT_CONFIG_LIST = [];
 
 /*
 **************************************************************************************
-* Code for GET and POST requsts sent to the client
+* Code for GET and POST requsts sent to the client -this is comment
 **************************************************************************************
 */
 const dir_path = 'C:\\Users\\Sun\\Documents\\JavaScript\\Projects\\Capacity Plan\\'
