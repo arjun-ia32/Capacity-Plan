@@ -24,7 +24,7 @@ const server_url = 'http://127.0.0.1:3000'; //localhost
 *     action: 'string',
 *     data: {
 *       // ideally contains data specific to the action string, e.g., filename, etc.
-*       filename: 'test.csv'
+*       me: 'test.csv'
 *       content: 'some-file-content'
 *     }
 *   }
