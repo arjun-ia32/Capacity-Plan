@@ -12,7 +12,7 @@ let HOT_CONFIG_LIST = [];
 
 /*
 **************************************************************************************
-* Code for GET and POST requsts sent to the client -this is comment
+* Code for GET and POST requsts sent to the client
 **************************************************************************************
 */
 const dir_path = ''
@@ -24,7 +24,7 @@ const server_url = 'http://127.0.0.1:3000'; //localhost
 *     action: 'string',
 *     data: {
 *       // ideally contains data specific to the action string, e.g., filename, etc.
-*       me: 'test.csv'
+*       filename: 'test.csv'
 *       content: 'some-file-content'
 *     }
 *   }
