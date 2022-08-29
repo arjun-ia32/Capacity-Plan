@@ -11,14 +11,25 @@
     <link rel="stylesheet" href="../../Library/js/handsontable-master/handsontable/dist/handsontable.full.min.css" />
     <script type="text/javascript" src="../../Library/js/handsontable-master/handsontable/dist/handsontable.full.min.js"></script>
     <script type="text/javascript" src="../../Library/js/PapaParse/papaparse.min.js"></script> <!-- for parsing csv files -->
-    <script type="text/javascript" src="./capplan.js"></script> <!-- for parsing csv files -->
+    <script type="text/javascript" src="../../Library/js/Rama/stat_functions.js"></script> <!-- for parsing csv files -->
+    <script type="text/javascript" src="./capplan.js"></script>
+    <script type="text/javascript" src="./erlang.js"></script>
 
     <script>
       "use strict";
       window.onload = main;
 
       function main() {
+        test_erlang();
         console.log('main()');
+      }
+
+      function test_erlang() {
+        let con = document.getElementById("other_test");
+
+        con.innerHTML += erlang_probability(10, 11) + "<br />";
+        con.innerHTML += erlang_service_level(11, 200, 180, 20) + "<br />";
+        con.innerHTML += erlang_agents(1, 200, 180, 0.8, 20) + "<br />";
       }
     </script>
 </head>
@@ -39,5 +50,6 @@
     </select>
   </div>
   <div id="hot_test"></div>
+  <div id="other_test"></div>
 </body>
 </html>

@@ -15,7 +15,7 @@ let HOT_CONFIG_LIST = [];
 * Code for GET and POST requsts sent to the client
 **************************************************************************************
 */
-const dir_path = 'C:\\Users\\Sun\\Documents\\JavaScript\\Projects\\Capacity Plan\\'
+const dir_path = ''
 const server_url = 'http://127.0.0.1:3000'; //localhost
 
 /*
@@ -219,7 +219,7 @@ function create_overall_lob(csv_data) {
               console.log('added ' + num + ' from lob ' + csv_data[i+j*nrows]['Subprocess'] + ' total ' + csv_data[new_idx][prop]);
             }
           }
-          if (calc_map[prop].calc === 'avg' && i === 0) {
+          if (calc_map[prop].calc === 'avg') {
             csv_data[new_idx][prop] /= csv_data.unique_lob_list.length;
           }
         } else {
@@ -249,6 +249,8 @@ function handle_csv_data(csv_data) {
 
   console.log("handle_csv_data()");
   select_lob_container.innerHTML = "";
+
+  // Populate LOB list
   for (let i = 0; i < csv_data.unique_lob_list.length; i++) {
     let opt = document.createElement('option');
     opt.value = csv_data.unique_lob_list[i];
@@ -389,12 +391,7 @@ function create_hot_config_data(csv_data, lob) {
     has_dependents: {},
   };
 
-  data.table = data.table.filter((value, index) => {
-    //console.log("checking " + value['Subprocess'] + ' against lob ' + lob);
-    return value['Subprocess'] === lob;
-  });
-  //console.log('after filter()>');
-  //console.log(data.table);
+  data.table = data.table.filter((value, index) => value['Subprocess'] === lob);
 
   add_calculation(data, 'FTE Required Gross', ['HC Billable', 'Planned OOO Shrinkage'],
     (row) => row["FTE Required Gross"] = parseFloat(parseFloat(row["HC Billable"]) / (1 - parseFloat(row["Planned OOO Shrinkage"]) / 100) / (parseFloat(row["Planned Occupancy %"]) / 100)).toFixed(PRECISION));
@@ -402,9 +399,6 @@ function create_hot_config_data(csv_data, lob) {
   add_calculation(data, 'Over/Under', ['HC Production', 'FTE Required Gross'],
     (row) => row["Over/Under"] = parseFloat(parseFloat(row["HC Production"] - parseFloat(row["FTE Required Gross"]))).toFixed(PRECISION));
 
-  //data.table.map((row) => row["FTE Required Gross"] = parseFloat(row["HC Billable"]) / (1 - parseFloat(row["Planned OOO Shrinkage"]) / 100));
-  //data.table.map((row) => row["HC Production"] = parseFloat(row["HC Tenured"]));
-  //data.table.map((row) => row["Over/Under"] = parseFloat(row["HC Production"] - parseFloat(row["FTE Required Gross"])));
   let transposed = transpose_data(data, 'Date');
   transposed = rows_to_hide(transposed);
   //console.log(transposed.rows_to_hide);
