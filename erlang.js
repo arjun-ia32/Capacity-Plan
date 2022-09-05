@@ -5,17 +5,24 @@
  */
 "use strict";
 //import "..\\..\\Library\\js\\Rama\\stat_function.js";
-const ERLANG_MAX_ITERS = 100;
+const ERLANG_MAX_ITERS = 20;
 const ERLANG_PRECISION = 0.05;
+const ERLANG_DEBUG = false;
 
 // Returns workload
 function erlang_traffic_intensity(volume, aht_secs) {
     return volume * aht_secs / 3600;
 }
 
+function erlang_log(msg) {
+    if (ERLANG_DEBUG)
+        console.log(msg);
+}
+
+
 function erlang_calc_numerator(traffic_intensity, agents) {
     let x = traffic_intensity ** agents / factorial(agents);
-    x *= agents / (agents - traffic_intensity);
+    x *= agents / Math.max(1, agents - traffic_intensity);
     return x;
 }
 
@@ -29,6 +36,12 @@ function erlang_probability(traffic_intensity, agents) {
 }
 
 function erlang_service_level(agents, volume, aht_secs, thres_secs) {
+/*
+    console.log(agents);
+    console.log(volume);
+    console.log(aht_secs);
+    console.log(thres_secs);
+    */
     let traffic_intensity = erlang_traffic_intensity(volume, aht_secs);
     let power = (agents - traffic_intensity) * (thres_secs / aht_secs);
     let p = erlang_probability(traffic_intensity, agents);
@@ -45,24 +58,53 @@ function match_fp(lhs, rhs, precision) {
     return Math.abs(rhs - lhs) <= precision;
 }
 
-function erlang_agents(interval_dur, volume, aht_secs, service_level, thres_secs) {
-    let traffic_intensity = erlang_traffic_intensity(volume, aht_secs);
-    let agents = traffic_intensity / interval_dur;
-    let agent_step = 1;
+
+// TODO: Fractional agents not yet fully suppported
+/*
+ pass an object with = {
+    volume: ,
+    aht_secs: ,
+    service_level: ,
+    thres_secs:,
+
+    // Optional
+    interval_dur:,
+    precision: ,
+    max_iters: ,
+    agent_step: ,
+ }
+ */
+function erlang_agents(args) {
+    if (!args.interval_dur)
+        args.interval_dur = 1;
+    if (!args.precision)
+        args.precision = ERLANG_PRECISION;
+    if (!args.max_iters)
+        args.max_iters = ERLANG_MAX_ITERS
+    if (!args.agent_step)
+        args.agent_step = 1;
+
+    let traffic_intensity = erlang_traffic_intensity(args.volume, args.aht_secs);
+    let agents = Math.round(traffic_intensity / args.interval_dur);
     let worst_diff = 1;
-    let diff;
-    for (let i = 0; i < ERLANG_MAX_ITERS; ++i) {
-        let sl = erlang_service_level(agents, volume, aht_secs, thres_secs);
-        diff = Math.abs(service_level - sl);
+
+    erlang_log(args);
+
+    for (let i = 0; i < args.max_iters; ++i) {
+        erlang_log(args);
+        let sl = erlang_service_level(agents, args.volume, args.aht_secs, args.thres_secs);
+        let diff = Math.abs(args.service_level - sl);
+        erlang_log("erlang_agents() - match with agents " + agents + " diff " + diff + " worst_diff " + worst_diff + " sl " + sl + " agents " + agents);
         if (diff > worst_diff) {
-            console.log("erlang_agents() - found a worse match");
+            erlang_log("erlang_agents() - found a worse match");
             return agents;
         }
-        if (diff < ERLANG_PRECISION) {
+        if (diff < args.precision) {
+            erlang_log("erlang_agents() - match with diff " + diff);
             return agents;
         }
         worst_diff = Math.min(diff, worst_diff);
-        agents += agent_step;
+        agents += args.agent_step;
     }
     return agents;
 }

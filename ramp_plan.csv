@@ -1,7 +1,0 @@
-Account,Subprocess,Metric,Week 01,Week 02,Week 03,Week 04,Week 05,Week 06,Week 07,Week 08,Week 09,Week 10,Week 11,Week 12,Week 13,Week 14,Week 15,Week 16,Week 17,Week 18,Week 19,Week 20,Week 21,Week 22,Week 23,Week 24
-Thor,Mjolnir,Productivity %,0.00%,0.00%,0.00%,0.00%,0.00%,10.00%,20.00%,45%,65%,85%,95.00%,100.00%,,,,,,,,,,,,
-Thor,Mjolnir,Avg Productivity per Day,0,0,0,0,0,8.5,17,38.25,55.25,72.25,80.75,85,,,,,,,,,,,,
-Thor,Mjolnir,Stage of Ramp,Training Preprocess,Training Preprocess,Training Process,Training Process,OJT/Quality,Ramp,Ramp,Ramp,Ramp,Ramp,Ramp,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured
-Thor,Yggdrasil,Productivity %,0.00%,0.00%,0.00%,0.00%,0.00%,40.00%,60.00%,80%,100%,,,,,,,,,,,,,,,
-Thor,Yggdrasil,Avg Productivity per Day,0,0,0,0,0,34,51,68,85,,,,,,,,,,,,,,,
-Thor,Yggdrasil,Stage of Ramp,Training Preprocess,Training Preprocess,Training Process,Training Process,OJT/Quality,Ramp,Ramp,Ramp,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured,Tenured

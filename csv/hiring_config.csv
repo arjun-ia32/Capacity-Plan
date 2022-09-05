@@ -1,0 +1,10 @@
+Account,Subprocess,Metric,Min Batch Size,Max TA Hiring Limit,Count of Training Rooms,Training Room Capacity,Count of Trainers,Min Gap Between Batches,Total Training HC Limit,Max HC Hiring Size,Max Batch Size
+Thor,Mjolnir,Min Batch Size,6,40,2,20,2,0,"60
+","20
+",40
+Thor,Yggdrasil,Max Batch Size,6,40,2,20,2,0,"60
+","20
+",40
+Thor,Lau’vabrac,Max TA Hiring Limit,6,40,2,20,2,0,"60
+","20
+",40

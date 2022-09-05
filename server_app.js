@@ -69,7 +69,6 @@ const server = HTTP.createServer((req, res) => {
       process_post_request(JSON.parse(body));
     });
   }
-
 });
 
 function process_post_request(request) {

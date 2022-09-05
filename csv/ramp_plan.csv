@@ -1,0 +1,37 @@
+Account,Subprocess,Week,Productivity %,Avg Productivity per Day,Stage of Ramp
+Thor,Mjolnir,1,0.00%,0,Training Preprocess
+Thor,Mjolnir,2,0.00%,0,Training Preprocess
+Thor,Mjolnir,3,0.00%,0,Training Process
+Thor,Mjolnir,4,0.00%,0,Training Process
+Thor,Mjolnir,5,0.00%,0,OJT/Quality
+Thor,Mjolnir,6,10.00%,8.5,Ramp
+Thor,Mjolnir,7,20.00%,17,Ramp
+Thor,Mjolnir,8,45%,38.25,Ramp
+Thor,Mjolnir,9,65%,55.25,Ramp
+Thor,Mjolnir,10,85%,72.25,Ramp
+Thor,Mjolnir,11,95.00%,80.75,Ramp
+Thor,Mjolnir,12,100.00%,85,Tenured
+Thor,Yggdrasil,1,0.00%,0,Training Preprocess
+Thor,Yggdrasil,2,0.00%,0,Training Preprocess
+Thor,Yggdrasil,3,0.00%,0,Training Process
+Thor,Yggdrasil,4,0.00%,0,Training Process
+Thor,Yggdrasil,5,0.00%,0,OJT/Quality
+Thor,Yggdrasil,6,10.00%,8.5,Ramp
+Thor,Yggdrasil,7,20.00%,17,Ramp
+Thor,Yggdrasil,8,45%,38.25,Ramp
+Thor,Yggdrasil,9,65%,55.25,Ramp
+Thor,Yggdrasil,10,85%,72.25,Ramp
+Thor,Yggdrasil,11,95.00%,80.75,Ramp
+Thor,Yggdrasil,12,100.00%,85,Tenured
+Thor,Lau’vabrac,1,0.00%,0,Training Preprocess
+Thor,Lau’vabrac,2,0.00%,0,Training Preprocess
+Thor,Lau’vabrac,3,0.00%,0,Training Process
+Thor,Lau’vabrac,4,0.00%,0,Training Process
+Thor,Lau’vabrac,5,0.00%,0,OJT/Quality
+Thor,Lau’vabrac,6,10.00%,8.5,Ramp
+Thor,Lau’vabrac,7,20.00%,17,Ramp
+Thor,Lau’vabrac,8,45%,38.25,Ramp
+Thor,Lau’vabrac,9,65%,55.25,Ramp
+Thor,Lau’vabrac,10,85%,72.25,Ramp
+Thor,Lau’vabrac,11,95.00%,80.75,Ramp
+Thor,Lau’vabrac,12,100.00%,85,Tenured

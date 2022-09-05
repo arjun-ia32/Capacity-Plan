@@ -6,7 +6,9 @@
 "use strict";
 
 let DATA = { table: [] };
-let CSV_FILENAME = 'billable_hc.csv';
+let CSV_PRIMRARY_DATABASE_FILENAME = 'csv\\billable_hc.csv';
+let CSV_RAMP_FILENAME = 'csv\\ramp_plan.csv';
+let CSV_HIRING_CONFIG = 'csv\\hiring_config.csv';
 let PRECISION = 2;
 let HOT_CONFIG_LIST = [];
 
@@ -15,8 +17,8 @@ let HOT_CONFIG_LIST = [];
 * Code for GET and POST requsts sent to the client
 **************************************************************************************
 */
-const dir_path = ''
-const server_url = 'http://127.0.0.1:3000'; //localhost
+const DIR_PATH = 'C:\\Users\\Sun\\Documents\\JavaScript\\Projects\\Capacity Plan\\';
+const SERVER_URL = 'http://127.0.0.1:3000'; //localhost
 
 /*
 * data must be in the below format:
@@ -34,7 +36,7 @@ function xmlhttp_post_request(data) {
     let json_string = JSON.stringify(data);
 
     let xhr_post = new XMLHttpRequest();
-    xhr_post.open('POST', server_url);
+    xhr_post.open('POST', SERVER_URL);
     xhr_post.setRequestHeader('content-type', 'text/plain', true);
     xhr_post.send(json_string);
     xhr_post.onreadystatechange = function() { 
@@ -60,7 +62,7 @@ function xmlhttp_post_request(data) {
 */
 function xmlhttp_get_request(data, callback) {
     //let data = { action: 'read', data: { filename: dir_path + 'billable_hc.csv' } };
-    console.log("send_get_request() was successfully called.");
+    //console.log("send_get_request() was successfully called.");
     let xhr_get = new XMLHttpRequest();
     xhr_get.onreadystatechange = function() {
         //console.log("GET onreadystatechange readyState = " + xhr_get.readyState + " status = " + xhr_get.status);
@@ -68,7 +70,7 @@ function xmlhttp_get_request(data, callback) {
             callback(xhr_get.responseText);
         }
     };
-    xhr_get.open('GET', server_url + '?action='+ data.action + '&filename=' + data.data.filename, true);
+    xhr_get.open('GET', SERVER_URL + '?action='+ data.action + '&filename=' + data.data.filename, true);
     xhr_get.send();
 }
 
@@ -115,7 +117,18 @@ function transpose_data(data, col_name, new_key = 'metric') {
 }
 
 function read_csv_file() {
-  const filepath = CSV_FILENAME;
+  read_csv_file_with_path(CSV_PRIMRARY_DATABASE_FILENAME, function(csv_data) {
+    read_csv_file_with_path(CSV_RAMP_FILENAME, function(csv_ramp_data) {
+      read_csv_file_with_path(CSV_HIRING_CONFIG, function(csv_hiring_config_data) {
+        create_overall_lob(csv_data);
+        handle_csv_data(csv_data, csv_ramp_data, csv_hiring_config_data);
+      });
+    });
+  });
+}
+
+function read_csv_file_with_path(filepath, callback) {
+  //const filepath = CSV_PRIMRARY_DATABASE_FILENAME;
   let get_req_data = {
     action: 'read',
     data: {
@@ -124,13 +137,13 @@ function read_csv_file() {
   };
 
   xmlhttp_get_request(get_req_data, function(csv_text) {
-    console.log("read csv succeeded");
+    console.log("read_csv_file() succeeded " + filepath);
     let csv_data = Papa.parse(csv_text, {
-      header: true
+      header: true,
+      skipEmptyLines: true
     });
     console.log(csv_data);
-    create_overall_lob(csv_data.data);
-    handle_csv_data(csv_data.data);
+    callback(csv_data.data);
   });
 }
 
@@ -182,7 +195,11 @@ function get_header_mapping() {
       "Batch 05 Training Week": { "calc": "sum" },
       "FTE Required Gross": { "calc": "sum" },
       "HC Production": { "calc": "sum" },
-      "Over/Under": { "calc": "sum" }
+      "Over/Under": { "calc": "sum" },
+      "SL %": { "calc": "avg" },
+      "SL Thres Secs": { "calc": "avg" },
+      "New Hire": { "calc": "sum" },
+      "FTE Weekly Hrs": { "calc": "avg" },
   }
 
   return mapping;
@@ -215,9 +232,9 @@ function create_overall_lob(csv_data) {
               num = csv_data[i+j*nrows][prop] = 0; // change all NaN to 0
             }
             csv_data[new_idx][prop] += num;
-            if (prop === 'HC Billable') {
-              console.log('added ' + num + ' from lob ' + csv_data[i+j*nrows]['Subprocess'] + ' total ' + csv_data[new_idx][prop]);
-            }
+            //if (prop === 'HC Billable') {
+            //  console.log('added ' + num + ' from lob ' + csv_data[i+j*nrows]['Subprocess'] + ' total ' + csv_data[new_idx][prop]);
+            //}
           }
           if (calc_map[prop].calc === 'avg') {
             csv_data[new_idx][prop] /= csv_data.unique_lob_list.length;
@@ -240,7 +257,7 @@ function create_overall_lob(csv_data) {
   console.log(csv_data);
 }
 
-function handle_csv_data(csv_data) {
+function handle_csv_data(csv_data, ramp_data, hiring_config_data) {
   let hot_container = document.getElementById("hot_test");
   let lob_list_container = document.getElementById("lob_list");
   let select_lob_container = document.getElementById("select-lob");
@@ -256,66 +273,102 @@ function handle_csv_data(csv_data) {
     opt.value = csv_data.unique_lob_list[i];
     opt.appendChild(document.createTextNode(csv_data.unique_lob_list[i]));
     select_lob_container.appendChild(opt);
-    let config = create_hot_config_data(csv_data, opt.value);
+    console.log("handle_csv_data(): lob: " + csv_data.unique_lob_list[i]);
+    let config = create_hot_config_data(csv_data, ramp_data, hiring_config_data, opt.value);
     config.lob = csv_data.unique_lob_list[i];
     HOT_CONFIG_LIST.push(config);
   }
 
-  
-  select_lob_container.addEventListener('change', () => {
-      let lob_name = select_lob_container.value;
-      let config;
-      console.log("select on lob change to " + lob_name);
-      for (let i = 0; i < HOT_CONFIG_LIST.length; ++i) {
-        if (HOT_CONFIG_LIST[i].lob === lob_name) {
-          config = HOT_CONFIG_LIST[i];
-          break;
-        }
+  let on_lob_change = () => {
+    let lob_name = select_lob_container.value;
+    let config;
+    console.log("select on lob change to " + lob_name);
+    for (let i = 0; i < HOT_CONFIG_LIST.length; ++i) {
+      if (HOT_CONFIG_LIST[i].lob === lob_name) {
+        config = HOT_CONFIG_LIST[i];
+        break;
       }
+    }
 
-      if (typeof config === 'undefined') {
-        console.log("could not find lob name in HOT_CONFIG_LIST");
-        throw "Could not find lob name " + lob_name;
-      }
+    if (typeof config === 'undefined') {
+      console.log("could not find lob name in HOT_CONFIG_LIST");
+      throw "Could not find lob name " + lob_name;
+    }
 
-      hot_container.innerHTML = "";
-      //console.log("select change, after for loop");
-      //console.log(config);
-      //console.log(HOT_CONFIG_LIST);
-      let hot = new Handsontable(hot_container, config);
-      config.afterChange_rama = (changes) => {
-        if (changes) {
-          changes.forEach(([row, prop, oldValue, newValue]) => {
-            console.log("row " + row + " with property " + prop + " changed from " + oldValue + " to " + newValue);
-            let metric = config.transposed.table[row]['metric'];
-            if (typeof config.transposed.has_dependents[metric] !== 'undefined') {
-              console.log('Found dependents for ' + metric);
-              console.log(config.transposed.has_dependents[metric]);
+    hot_container.innerHTML = "";
+    //console.log("select change, after for loop");
+    //console.log(config);
+    //console.log(HOT_CONFIG_LIST);
+    let hot = new Handsontable(hot_container, config);
+    config.afterChange_rama = (changes) => {
+      if (changes) {
+        changes.forEach(([row, prop, oldValue, newValue]) => {
+          console.log("row " + row + " with property " + prop + " changed from " + oldValue + " to " + newValue);
+          let metric = config.transposed.table[row]['metric'];
+          if (typeof config.transposed.has_dependents[metric] !== 'undefined') {
+            console.log('Found dependents for ' + metric);
+            console.log(config.transposed.has_dependents[metric]);
+          }
+          config.transposed.table[row][prop] = newValue;
+          if (metric === 'HC Tenured') {
+            let hc_prod = config.transposed.row_mapping['HC Production'];
+            config.transposed.table[hc_prod][prop] = config.transposed.table[row][prop];
+            //hot.setDataAtRowProp(hc_prod, prop, config.transposed.table[hc_prod][prop]);
+          }
+          if (metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %') {
+            let occu = config.transposed.row_mapping['Planned Occupancy %'];
+            let bill = config.transposed.row_mapping['HC Billable'];
+            let shrink = config.transposed.row_mapping['Planned OOO Shrinkage'];
+            let gross = config.transposed.row_mapping['FTE Required Gross'];
+            config.transposed.table[gross][prop] = parseFloat(config.transposed.table[bill][prop] / ((100 - parseFloat(config.transposed.table[shrink][prop])) / 100) / (parseFloat(config.transposed.table[occu][prop]) / 100)).toFixed(PRECISION);
+            //hot.setDataAtRowProp(bill, prop, config.transposed.table[bill][prop]);
+            //hot.setDataAtRowProp(gross, prop, config.transposed.table[gross][prop]);
+          }
+          if (metric === 'Volume' || metric === 'AHT' || metric === 'SL %' || metric == 'SL Thres Secs') {
+            let i_bt = config.transposed.row_mapping['Billing Type'];
+            let i_vol = config.transposed.row_mapping['Volume'];
+            let i_aht = config.transposed.row_mapping['AHT'];
+            let i_bh = config.transposed.row_mapping['HC Billable'];
+            let i_wh = config.transposed.row_mapping['FTE Weekly Hrs'];
+            let i_frg = config.transposed.row_mapping['FTE Required Gross'];
+            let i_s = config.transposed.row_mapping['Planned OOO Shrinkage'];
+            let i_o = config.transposed.row_mapping['Planned Occupancy %'];
+            let i_sl = config.transposed.row_mapping['SL %'];
+            let i_sts = config.transposed.row_mapping['SL Thres Secs'];
+            if (config.transposed.table[i_bt][prop] === 'Transaction') {
+              config.transposed.table[i_bh][prop] = parseFloat(parseFloat(config.transposed.table[i_vol][prop]) * parseFloat(config.transposed.table[i_aht][prop]) / 3600 / parseFloat(config.transposed.table[i_wh][prop])).toFixed(PRECISION);
+            } else if (config.transposed.table[i_bt][prop] === 'Transaction_Erlang') {
+              console.log("got erlang() change");
+              let vol = parseFloat(config.transposed.table[i_vol][prop]);
+              let aht = parseFloat(config.transposed.table[i_aht][prop]);
+              let sl = parseFloat(config.transposed.table[i_sl][prop]) / 100;
+              let sl_thres = parseFloat(config.transposed.table[i_sts][prop]);
+              let fte_weekly_hrs = parseFloat(config.transposed.table[i_wh][prop]);
+              config.transposed.table[i_bh][prop] = parseFloat(erlang_agents({
+                volume: vol, aht_secs: aht, service_level: sl, thres_secs: sl_thres, interval_dur: fte_weekly_hrs
+              })).toFixed(2);
             }
-            config.transposed.table[row][prop] = newValue;
-            if (metric === 'HC Tenured') {
-              let hc_prod = config.transposed.row_mapping['HC Production'];
-              config.transposed.table[hc_prod][prop] = config.transposed.table[row][prop];
-            }
-            if (metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %') {
-              let occu = config.transposed.row_mapping['Planned Occupancy %'];
-              let bill = config.transposed.row_mapping['HC Billable'];
-              let shrink = config.transposed.row_mapping['Planned OOO Shrinkage'];
-              let gross = config.transposed.row_mapping['FTE Required Gross'];
-              config.transposed.table[gross][prop] = parseFloat(config.transposed.table[bill][prop] / ((100 - parseFloat(config.transposed.table[shrink][prop])) / 100) / (parseFloat(config.transposed.table[occu][prop]) / 100)).toFixed(PRECISION);
-            }
-            if (metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %' || metric === 'HC Tenured' || metric === 'HC Production' || metric === 'FTE Required Gross') {
-              console.log('changing over/under');
-              let ou = config.transposed.row_mapping['Over/Under'];
-              let a = config.transposed.row_mapping['HC Production'];
-              let b = config.transposed.row_mapping['FTE Required Gross'];
-              config.transposed.table[ou][prop] = parseFloat(config.transposed.table[a][prop] - config.transposed.table[b][prop]).toFixed(PRECISION);
-              hot.setDataAtRowProp(ou, prop, config.transposed.table[ou][prop]);
-            }
-          });
-        }
+            config.transposed.table[i_frg][prop] = parseFloat(config.transposed.table[i_bh][prop] / ((100 - parseFloat(config.transposed.table[i_s][prop])) / 100) / (parseFloat(config.transposed.table[i_o][prop]) / 100)).toFixed(PRECISION);
+            hot.setDataAtRowProp(i_bh, prop, config.transposed.table[i_bh][prop]);
+            hot.setDataAtRowProp(i_frg, prop, config.transposed.table[i_frg][prop]);
+            //hot.setDataAtRowProp(i_sl, prop, config.transposed.table[i_sl][prop]);
+            //hot.setDataAtRowProp(i_sts, prop, config.transposed.table[i_sts][prop]);
+          }
+          if (metric === 'Volume' || metric === 'AHT' || metric === 'SL %' || metric == 'SL Thres Secs' || metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %' || metric === 'HC Tenured' || metric === 'HC Production' || metric === 'FTE Required Gross') {
+            console.log('changing over/under');
+            let ou = config.transposed.row_mapping['Over/Under'];
+            let a = config.transposed.row_mapping['HC Production'];
+            let b = config.transposed.row_mapping['FTE Required Gross'];
+            config.transposed.table[ou][prop] = parseFloat(config.transposed.table[a][prop] - config.transposed.table[b][prop]).toFixed(PRECISION);
+            hot.setDataAtRowProp(ou, prop, config.transposed.table[ou][prop]);
+          }
+        });
       }
-    });
+    }
+  }
+
+  select_lob_container.addEventListener('change', on_lob_change);
+  on_lob_change();
 }
 
 function remove_calculated_properties(data) {
@@ -347,7 +400,7 @@ function save_table(hot_config_list) {
   xmlhttp_post_request({
     action: 'save',
     data: {
-      filename: dir_path + CSV_FILENAME,
+      filename: DIR_PATH + CSV_PRIMRARY_DATABASE_FILENAME,
       content: Papa.unparse(double_trans.table),
     }
   });
@@ -357,13 +410,19 @@ function save_csv_file() {
   save_table(HOT_CONFIG_LIST);
 }
 
-function metrics_to_display() {
+function metrics_to_display(billing_type) {
   let display_metrics = ['Account', 'Subprocess', 'HC Billable', 'HC New Hires', 'Planned Occupancy %', 'Planned OOO Shrinkage', 'Planned IO Shrinkage', 'HC Tenured', 'FTE Required Gross', 'HC Production', 'Over/Under'];
+  if (billing_type === 'Transaction') {
+    display_metrics = display_metrics.concat(['Volume', 'AHT']);
+  } else if (billing_type === 'Transaction_Erlang') {
+    display_metrics = display_metrics.concat(['Volume', 'AHT', 'SL %', 'SL Thres Secs']);
+  }
+  
   return display_metrics;
 }
 
-function rows_to_hide(transposed) {
-  let to_display = metrics_to_display();
+function rows_to_hide(transposed, billing_type) {
+  let to_display = metrics_to_display(billing_type);
   transposed.rows_to_hide = [];
   for (let i = 0; i < transposed.table.length; ++i) {
     if (!to_display.find((x) => x === transposed.table[i]['metric'])) {
@@ -384,14 +443,69 @@ function add_calculation(data, new_header, sources, calc_func) {
   }
 }
 
-function create_hot_config_data(csv_data, lob) {
+function check_if_we_can_add_new_batches(data, current_month) {
+  //let ou = data.table[current_month]['Over/Under'];
+  let lob = data.table[current_month]['Subprocess'];
+  let min_ou = data.table[Math.min(data.table.length, current_month + data.ramp.max_months)]['Over/Under'];
+  if (min_ou >= 0) {
+    console.log("check_if_we_can_add_new_batches(): return min_ou >= 0" +
+    " lob = " + lob +
+    " min_ou " + min_ou +
+    " ramp.max_months = " + data.ramp.max_months);
+      return; // Over unders are in positive
+  }
+  min_ou = Math.round(Math.abs(min_ou));
+  if (min_ou < data.hiring.config['Min Batch Size']) {
+    console.log("check_if_we_can_add_new_batches(): return min_ou < Min Batch Size" +
+    " lob = " + lob +
+    " min_ou " + min_ou +
+    " min batch size = " + data.hiring.config['Min Batch Size'] + 
+    " ramp.max_months = " + data.ramp.max_months);
+    return; // Cannot hire small batches
+  }
+
+  let max_hiring = data.hiring.config['Max HC Hiring Size'];
+  let hc_plot_now = Math.min(min_ou, max_hiring);
+  let hc_carry_over = Math.max(0, min_ou - hc_plot_now);
+
+  console.log("check_if_we_can_add_new_batches(): lob = " + lob +
+    " min_ou " + min_ou +
+    " ramp.max_months = " + data.ramp.max_months +
+    " min batch size = " + data.hiring.config['Min Batch Size'] + 
+    " hc_plot_now = " + hc_plot_now + 
+    " hc_carry_over = " + hc_carry_over);
+}
+
+function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
   let data = {
     table: csv_data,
+    ramp: {},
+    hiring: {},
     header_text_list: { date: 'Month', billable_hc: 'Billable HC', actual_hc: 'Actual HC', over_under: 'Over/Under' },
     has_dependents: {},
   };
 
-  data.table = data.table.filter((value, index) => value['Subprocess'] === lob);
+  data.table = data.table.filter((row, index) => row['Subprocess'] === lob);
+  data.ramp.table = ramp_data.filter((row, index) => row['Subprocess'] === lob);
+  data.ramp.max_months = data.ramp.table.length / 4;
+  console.log(hiring_config_data);
+  data.hiring.config = hiring_config_data.filter((row, index) => row['Subprocess'] === lob)[0];
+  console.log(data.hiring.config + " lob = " + lob);
+
+  let billing_type = data.table[0]['Billing Type'];
+  if (billing_type === 'Transaction') {
+    add_calculation(data, 'HC Billable', ['Volume', 'AHT'],
+      (row) => row["HC Billable"] = parseFloat((parseFloat(row['Volume']) * parseFloat(row['AHT']) / 3600) / parseFloat(row['FTE Weekly Hrs'])).toFixed(PRECISION));
+  } else if (billing_type === 'Transaction_Erlang') {
+    add_calculation(data, 'HC Billable', ['Volume', 'AHT', 'SL %', 'SL Thres Secs'],
+      (row) => row["HC Billable"] = parseFloat(erlang_agents({
+        volume: parseFloat(row['Volume']),
+        aht_secs: parseFloat(row['AHT']),
+        service_level: parseFloat(row['SL %']) / 100,
+        thres_secs: parseFloat(row['SL Thres Secs']),
+        interval_dur: parseFloat(row['FTE Weekly Hrs']),
+      })).toFixed(PRECISION));
+  }
 
   add_calculation(data, 'FTE Required Gross', ['HC Billable', 'Planned OOO Shrinkage'],
     (row) => row["FTE Required Gross"] = parseFloat(parseFloat(row["HC Billable"]) / (1 - parseFloat(row["Planned OOO Shrinkage"]) / 100) / (parseFloat(row["Planned Occupancy %"]) / 100)).toFixed(PRECISION));
@@ -399,8 +513,10 @@ function create_hot_config_data(csv_data, lob) {
   add_calculation(data, 'Over/Under', ['HC Production', 'FTE Required Gross'],
     (row) => row["Over/Under"] = parseFloat(parseFloat(row["HC Production"] - parseFloat(row["FTE Required Gross"]))).toFixed(PRECISION));
 
+  if (lob !== 'Overall')
+    check_if_we_can_add_new_batches(data, 0);
   let transposed = transpose_data(data, 'Date');
-  transposed = rows_to_hide(transposed);
+  transposed = rows_to_hide(transposed, billing_type);
   //console.log(transposed.rows_to_hide);
   //console.log(transposed.has_dependents);
 
