@@ -7,7 +7,7 @@
 //import "..\\..\\Library\\js\\Rama\\stat_function.js";
 const ERLANG_MAX_ITERS = 20;
 const ERLANG_PRECISION = 0.05;
-const ERLANG_DEBUG = false;
+const ERLANG_DEBUG = true;
 
 // Returns workload
 function erlang_traffic_intensity(volume, aht_secs) {
@@ -32,19 +32,26 @@ function erlang_probability(traffic_intensity, agents) {
     for (let i = 0; i < agents; ++i) {
         sum += traffic_intensity ** i / factorial(i);
     }
+    erlang_log("x = " + x +
+        " y = " + sum);
     return x / (sum + x);
 }
 
-function erlang_service_level(agents, volume, aht_secs, thres_secs) {
+function erlang_service_level(agents, volume, aht_secs, thres_secs, interval_dur) {
 /*
     console.log(agents);
     console.log(volume);
     console.log(aht_secs);
     console.log(thres_secs);
     */
-    let traffic_intensity = erlang_traffic_intensity(volume, aht_secs);
-    let power = (agents - traffic_intensity) * (thres_secs / aht_secs);
-    let p = erlang_probability(traffic_intensity, agents);
+    let erlang = erlang_traffic_intensity(volume, aht_secs) / interval_dur;
+    let power = (agents - erlang) * (thres_secs / aht_secs);
+    let p = erlang_probability(erlang, agents);
+
+    erlang_log("erlang = " + erlang +
+        " power = " + power +
+        " prob = " + p)
+        " result = " + (1 - (p * Math.E ** -power));
     return 1 - (p * Math.E ** -power);
 }
 
@@ -92,7 +99,7 @@ function erlang_agents(args) {
 
     for (let i = 0; i < args.max_iters; ++i) {
         erlang_log(args);
-        let sl = erlang_service_level(agents, args.volume, args.aht_secs, args.thres_secs);
+        let sl = erlang_service_level(agents, args.volume, args.aht_secs, args.thres_secs, args.interval_dur);
         let diff = Math.abs(args.service_level - sl);
         erlang_log("erlang_agents() - match with agents " + agents + " diff " + diff + " worst_diff " + worst_diff + " sl " + sl + " agents " + agents);
         if (diff > worst_diff) {
