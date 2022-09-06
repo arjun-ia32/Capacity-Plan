@@ -303,65 +303,32 @@ function handle_csv_data(csv_data, ramp_data, hiring_config_data) {
     config.afterChange_rama = (changes) => {
       if (changes) {
         changes.forEach(([row, prop, oldValue, newValue]) => {
-          console.log("row " + row + " with property " + prop + " changed from " + oldValue + " to " + newValue);
+          console.log("row " + row + " (" + config.transposed.table[row]['metric'] + ") with property " + prop + " changed from " + oldValue + " to " + newValue);
           let metric = config.transposed.table[row]['metric'];
           if (typeof config.transposed.has_dependents[metric] !== 'undefined') {
             console.log('Found dependents for ' + metric);
             console.log(config.transposed.has_dependents[metric]);
+
+            let single_row = {};
+            config.transposed.table.forEach((row, idx) => {
+                  single_row[config.transposed.table[idx]['metric']] = row[prop];
+            });
+            //console.log("single_row is below:");
+            //console.log(single_row);
+            let new_table = [single_row];
+            config.transposed.has_dependents[metric].forEach((dependent) => {
+              //let dependent = config.transposed.has_dependents[metric][0];
+              new_table = new_table.map(config.transposed.callbacks[dependent]);
+              //console.log("new_table with calculated value:");
+              //console.log(new_table);
+              console.log("Setting config.transposed.table[" + config.transposed.row_mapping[dependent] + "][" + prop + "] = " + new_table[0]);
+              console.log(config.transposed.callbacks[dependent]);
+              config.transposed.table[config.transposed.row_mapping[dependent]][prop] = new_table[0]; // internal table
+              hot.setDataAtRowProp(config.transposed.row_mapping[dependent], prop, new_table[0]); // HTML Display table
+            });
           }
-          config.transposed.table[row][prop] = newValue;
-          if (metric === 'HC Tenured') {
-            let hc_prod = config.transposed.row_mapping['HC Production'];
-            config.transposed.table[hc_prod][prop] = config.transposed.table[row][prop];
-            //hot.setDataAtRowProp(hc_prod, prop, config.transposed.table[hc_prod][prop]);
-          }
-          if (metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %') {
-            let occu = config.transposed.row_mapping['Planned Occupancy %'];
-            let bill = config.transposed.row_mapping['HC Billable'];
-            let shrink = config.transposed.row_mapping['Planned OOO Shrinkage'];
-            let gross = config.transposed.row_mapping['FTE Required Gross'];
-            config.transposed.table[gross][prop] = parseFloat(config.transposed.table[bill][prop] / ((100 - parseFloat(config.transposed.table[shrink][prop])) / 100) / (parseFloat(config.transposed.table[occu][prop]) / 100)).toFixed(PRECISION);
-            //hot.setDataAtRowProp(bill, prop, config.transposed.table[bill][prop]);
-            //hot.setDataAtRowProp(gross, prop, config.transposed.table[gross][prop]);
-          }
-          if (metric === 'Volume' || metric === 'AHT' || metric === 'SL %' || metric == 'SL Thres Secs') {
-            let i_bt = config.transposed.row_mapping['Billing Type'];
-            let i_vol = config.transposed.row_mapping['Volume'];
-            let i_aht = config.transposed.row_mapping['AHT'];
-            let i_bh = config.transposed.row_mapping['HC Billable'];
-            let i_wh = config.transposed.row_mapping['FTE Weekly Hrs'];
-            let i_frg = config.transposed.row_mapping['FTE Required Gross'];
-            let i_s = config.transposed.row_mapping['Planned OOO Shrinkage'];
-            let i_o = config.transposed.row_mapping['Planned Occupancy %'];
-            let i_sl = config.transposed.row_mapping['SL %'];
-            let i_sts = config.transposed.row_mapping['SL Thres Secs'];
-            if (config.transposed.table[i_bt][prop] === 'Transaction') {
-              config.transposed.table[i_bh][prop] = parseFloat(parseFloat(config.transposed.table[i_vol][prop]) * parseFloat(config.transposed.table[i_aht][prop]) / 3600 / parseFloat(config.transposed.table[i_wh][prop])).toFixed(PRECISION);
-            } else if (config.transposed.table[i_bt][prop] === 'Transaction_Erlang') {
-              console.log("got erlang() change");
-              let vol = parseFloat(config.transposed.table[i_vol][prop]);
-              let aht = parseFloat(config.transposed.table[i_aht][prop]);
-              let sl = parseFloat(config.transposed.table[i_sl][prop]) / 100;
-              let sl_thres = parseFloat(config.transposed.table[i_sts][prop]);
-              let fte_weekly_hrs = parseFloat(config.transposed.table[i_wh][prop]);
-              config.transposed.table[i_bh][prop] = parseFloat(erlang_agents({
-                volume: vol, aht_secs: aht, service_level: sl, thres_secs: sl_thres, interval_dur: fte_weekly_hrs
-              })).toFixed(2);
-            }
-            config.transposed.table[i_frg][prop] = parseFloat(config.transposed.table[i_bh][prop] / ((100 - parseFloat(config.transposed.table[i_s][prop])) / 100) / (parseFloat(config.transposed.table[i_o][prop]) / 100)).toFixed(PRECISION);
-            hot.setDataAtRowProp(i_bh, prop, config.transposed.table[i_bh][prop]);
-            hot.setDataAtRowProp(i_frg, prop, config.transposed.table[i_frg][prop]);
-            //hot.setDataAtRowProp(i_sl, prop, config.transposed.table[i_sl][prop]);
-            //hot.setDataAtRowProp(i_sts, prop, config.transposed.table[i_sts][prop]);
-          }
-          if (metric === 'Volume' || metric === 'AHT' || metric === 'SL %' || metric == 'SL Thres Secs' || metric === 'HC Billable' || metric === 'Planned OOO Shrinkage' || metric === 'Planned Occupancy %' || metric === 'HC Tenured' || metric === 'HC Production' || metric === 'FTE Required Gross') {
-            console.log('changing over/under');
-            let ou = config.transposed.row_mapping['Over/Under'];
-            let a = config.transposed.row_mapping['HC Production'];
-            let b = config.transposed.row_mapping['FTE Required Gross'];
-            config.transposed.table[ou][prop] = parseFloat(config.transposed.table[a][prop] - config.transposed.table[b][prop]).toFixed(PRECISION);
-            hot.setDataAtRowProp(ou, prop, config.transposed.table[ou][prop]);
-          }
+          config.transposed.table[row][prop] = newValue; // internal table
+          //hot.setDataAtRowProp(ou, prop, config.transposed.table[ou][prop]); // HTML table for the user
         });
       }
     }
@@ -434,6 +401,7 @@ function rows_to_hide(transposed, billing_type) {
 
 function add_calculation(data, new_header, sources, calc_func) {
   data.table.map(calc_func);
+  data.callbacks[new_header] = calc_func;
   if (typeof data.has_dependents === 'undefined')
     data.has_dependents = {};
   for (let i = 0; i < sources.length; ++i) {
@@ -481,6 +449,7 @@ function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
     table: csv_data,
     ramp: {},
     hiring: {},
+    callbacks: {},
     header_text_list: { date: 'Month', billable_hc: 'Billable HC', actual_hc: 'Actual HC', over_under: 'Over/Under' },
     has_dependents: {},
   };
@@ -507,7 +476,7 @@ function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
       })).toFixed(PRECISION));
   }
 
-  add_calculation(data, 'FTE Required Gross', ['HC Billable', 'Planned OOO Shrinkage'],
+  add_calculation(data, 'FTE Required Gross', ['HC Billable', 'Planned OOO Shrinkage', 'Planned Occupancy %'],
     (row) => row["FTE Required Gross"] = parseFloat(parseFloat(row["HC Billable"]) / (1 - parseFloat(row["Planned OOO Shrinkage"]) / 100) / (parseFloat(row["Planned Occupancy %"]) / 100)).toFixed(PRECISION));
   add_calculation(data, 'HC Production', ['HC Tenured'],                                  (row) => row["HC Production"] = parseFloat(row["HC Tenured"]));
   add_calculation(data, 'Over/Under', ['HC Production', 'FTE Required Gross'],
