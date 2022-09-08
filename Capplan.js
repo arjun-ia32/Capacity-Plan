@@ -163,36 +163,30 @@ function get_header_mapping() {
       "Planned OOO Shrinkage": { "calc": "avg" },
       "Planned IO Shrinkage": { "calc": "avg" },
       "HC Tenured": { "calc": "sum" },
-      "Batch 01 Ramp ID": { "calc": "sum" },
-      "Batch 01 Ramp HC": { "calc": "sum" },
-      "Batch 01 Ramp Week": { "calc": "sum" },
-      "Batch 02 Ramp ID": { "calc": "sum" },
-      "Batch 02 Ramp HC": { "calc": "sum" },
-      "Batch 02 Ramp Week": { "calc": "sum" },
-      "Batch 03 Ramp ID": { "calc": "sum" },
-      "Batch 03 Ramp HC": { "calc": "sum" },
-      "Batch 03 Ramp Week": { "calc": "sum" },
-      "Batch 04 Ramp ID": { "calc": "sum" },
-      "Batch 04 Ramp HC": { "calc": "sum" },
-      "Batch 04 Ramp Week": { "calc": "sum" },
-      "Batch 05 Ramp ID": { "calc": "sum" },
-      "Batch 05 Ramp HC": { "calc": "sum" },
-      "Batch 05 Ramp Week": { "calc": "sum" },
-      "Batch 01 Training ID": { "calc": "sum" },
-      "Batch 01 Training HC": { "calc": "sum" },
-      "Batch 01 Training Week": { "calc": "sum" },
-      "Batch 02 Training ID": { "calc": "sum" },
-      "Batch 02 Training HC": { "calc": "sum" },
-      "Batch 02 Training Week": { "calc": "sum" },
-      "Batch 03 Training ID": { "calc": "sum" },
-      "Batch 03 Training HC": { "calc": "sum" },
-      "Batch 03 Training Week": { "calc": "sum" },
-      "Batch 04 Training ID": { "calc": "sum" },
-      "Batch 04 Training HC": { "calc": "sum" },
-      "Batch 04 Training Week": { "calc": "sum" },
-      "Batch 05 Training ID": { "calc": "sum" },
-      "Batch 05 Training HC": { "calc": "sum" },
-      "Batch 05 Training Week": { "calc": "sum" },
+      "Batch 01 ID": { "calc": "sum" },
+      "Batch 01 Throughput": { "calc": "avg" },
+      "Batch 01 HC": { "calc": "sum" },
+      "Batch 01 FTE": { "calc": "sum" },
+      "Batch 01 Week": { "calc": "sum" },
+      "Batch 01 Prod %": { "calc": "avg" },
+      "Batch 01 Prod": { "calc": "avg" },
+      "Batch 01 Stage": { "calc": "none" },
+      "Batch 02 ID": { "calc": "sum" },
+      "Batch 02 Throughput": { "calc": "avg" },
+      "Batch 02 HC": { "calc": "sum" },
+      "Batch 02 FTE": { "calc": "sum" },
+      "Batch 02 Week": { "calc": "sum" },
+      "Batch 02 Prod %": { "calc": "avg" },
+      "Batch 02 Prod": { "calc": "avg" },
+      "Batch 02 Stage": { "calc": "none" },
+      "Batch 03 ID": { "calc": "sum" },
+      "Batch 03 Throughput": { "calc": "avg" },
+      "Batch 03 HC": { "calc": "sum" },
+      "Batch 03 FTE": { "calc": "sum" },
+      "Batch 03 Week": { "calc": "sum" },
+      "Batch 03 Prod %": { "calc": "avg" },
+      "Batch 03 Prod": { "calc": "avg" },
+      "Batch 03 Stage": { "calc": "none" },
       "FTE Required Gross": { "calc": "sum" },
       "HC Production": { "calc": "sum" },
       "Over/Under": { "calc": "sum" },
@@ -200,6 +194,7 @@ function get_header_mapping() {
       "SL Thres Secs": { "calc": "avg" },
       "New Hire": { "calc": "sum" },
       "FTE Weekly Hrs": { "calc": "avg" },
+      "Data Type": { "calc": "none" },
   }
 
   return mapping;
@@ -251,10 +246,10 @@ function create_overall_lob(csv_data) {
   }
 
   csv_data.unique_lob_list.push(overall);
-  console.log("create_overall_lob()");
-  console.log(nrows);
-  console.log(lob_list.length);
-  console.log(csv_data);
+  //console.log("create_overall_lob()");
+  //console.log(nrows);
+  //console.log(lob_list.length);
+  //console.log(csv_data);
 }
 
 function handle_csv_data(csv_data, ramp_data, hiring_config_data) {
@@ -273,7 +268,7 @@ function handle_csv_data(csv_data, ramp_data, hiring_config_data) {
     opt.value = csv_data.unique_lob_list[i];
     opt.appendChild(document.createTextNode(csv_data.unique_lob_list[i]));
     select_lob_container.appendChild(opt);
-    console.log("handle_csv_data(): lob: " + csv_data.unique_lob_list[i]);
+    //console.log("handle_csv_data(): lob: " + csv_data.unique_lob_list[i]);
     let config = create_hot_config_data(csv_data, ramp_data, hiring_config_data, opt.value);
     config.lob = csv_data.unique_lob_list[i];
     HOT_CONFIG_LIST.push(config);
@@ -444,6 +439,64 @@ function check_if_we_can_add_new_batches(data, current_month) {
     " hc_carry_over = " + hc_carry_over);
 }
 
+function ramp_map() {
+  // key - in DB
+  // value - in Ramp
+  let m = {
+    'Batch XX Week': 'Week',
+    'Batch XX Prod %': 'Productivity %',
+    'Batch XX Prod': 'Avg Productivity per Day',
+    'Batch XX Stage':'Stage of Ramp',
+    // 'Account':'Account',
+    // 'Subprocess':'Subprocess',
+  };
+
+  return m;
+}
+
+function apply_ramp(data, batch_num, start_row) {
+  let m = ramp_map();
+  //console.log(data.ramp);
+  data.ramp.table.forEach((r) => {
+    for (let key of Object.keys(m)) {
+      data.table[start_row][key.replace('XX', batch_num)] = r[m[key]];
+    }
+    start_row++;
+  });
+}
+
+function process_ramp_plan(data, batch_num) {
+  console.log('process_ramp_plan()');
+  let num_string = batch_num.toString().padStart(2, '0');
+  let prefix = 'Batch ' + num_string + ' ';
+  let hdr =  (hdr_string, r) => {
+    return r[prefix + hdr_string];
+  }
+  let is_empty = (r) => {
+    return r == 0 || r == '0' && r == '';
+  }
+
+  const ojt_stage = 'OJT/Quality';
+  const ramp_stage = 'Ramp';
+  let prev_stage = '';
+  data.table.forEach((row, idx) => {
+    let stage = hdr('Stage', row);
+    let hc = hdr('HC', row);
+    if (parseFloat(hc) > 0) {
+       if (is_empty(stage)) { // Add default ramp values
+        apply_ramp(data, num_string, idx);
+      }
+    } else if (row['Data Type'] == 'Projections' && !is_empty(stage)) { // HC is <= 0
+      if (prev_stage === ojt_stage && stage === ramp_stage) { // Apply training throughput here
+        row[prefix + 'HC'] = parseFloat(parseFloat(data.table[idx - 1][prefix + 'HC']) * parseFloat(row[prefix + 'Throughput']) / 100).toFixed(PRECISION);
+      } else { // Apply attrition
+        row[prefix + 'HC'] = parseFloat(parseFloat(data.table[idx - 1][prefix + 'HC']) * (1 - (parseFloat(row['Baseline Attrition %']) / 100))).toFixed(PRECISION);
+      }
+    }
+    prev_stage = stage;
+  });
+}
+
 function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
   let data = {
     table: csv_data,
@@ -454,11 +507,11 @@ function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
     has_dependents: {},
   };
 
-  data.table = data.table.filter((row, index) => row['Subprocess'] === lob);
-  data.ramp.table = ramp_data.filter((row, index) => row['Subprocess'] === lob);
+  data.table = data.table.filter((row) => row['Subprocess'] === lob);
+  data.ramp.table = ramp_data.filter((row) => row['Subprocess'] === lob);
   data.ramp.max_months = data.ramp.table.length / 4;
   console.log(hiring_config_data);
-  data.hiring.config = hiring_config_data.filter((row, index) => row['Subprocess'] === lob)[0];
+  data.hiring.config = hiring_config_data.filter((row) => row['Subprocess'] === lob)[0];
   console.log(data.hiring.config + " lob = " + lob);
 
   let billing_type = data.table[0]['Billing Type'];
@@ -482,6 +535,15 @@ function create_hot_config_data(csv_data, ramp_data, hiring_config_data, lob) {
   add_calculation(data, 'Over/Under', ['HC Production', 'FTE Required Gross'],
     (row) => row["Over/Under"] = parseFloat(parseFloat(row["HC Production"] - parseFloat(row["FTE Required Gross"]))).toFixed(PRECISION));
 
+  for (let i = 1; i <= 3; ++i) {
+    let num_string = i.toString().padStart(2, '0');
+    let batch_fte = 'Batch ' + num_string + ' FTE';
+    let batch_prod = 'Batch ' + num_string + ' Prod %';
+    let batch_hc = 'Batch ' + num_string + ' HC';
+    process_ramp_plan(data, 1);
+    add_calculation(data, batch_fte, [batch_hc, batch_prod],
+      (row) => row[batch_fte] = parseFloat(parseFloat(row[batch_hc] * (parseFloat(row[batch_prod]) / 100))).toFixed(PRECISION));
+  }
   if (lob !== 'Overall')
     check_if_we_can_add_new_batches(data, 0);
   let transposed = transpose_data(data, 'Date');
